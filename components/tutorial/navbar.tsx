@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { AuthButton } from "@/components/auth-button";
 import { EnvVarWarning } from "@/components/env-var-warning";
 import { hasEnvVars } from "@/lib/utils";
+import { NavLinks } from "./nav-links";
+import { ThemeSwitcher } from "../theme-switcher";
 
 const Navbar = () => {
   return (
-    <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16 bg-background shadow-sm">
-      <div className="w-full max-w-7xl flex justify-between items-center p-3 px-5">
-        <div className="flex-1">
+    <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16 bg-background shadow-sm text-lg">
+      <div className="w-full max-w-7xl flex items-center p-3 px-5">
+        <div className="flex-1 flex justify-start min-w-0">
           <Link
             href="/"
             className="text-xl font-semibold hover:opacity-80 transition-opacity"
@@ -17,7 +19,12 @@ const Navbar = () => {
             Newsletter App
           </Link>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex-shrink-0 flex items-center justify-center px-4">
+          <Suspense>
+            <NavLinks />
+          </Suspense>
+        </div>
+        <div className="flex-1 flex items-center justify-end gap-4 min-w-0">
           {!hasEnvVars ? (
             <EnvVarWarning />
           ) : (
@@ -25,6 +32,7 @@ const Navbar = () => {
               <AuthButton />
             </Suspense>
           )}
+          <ThemeSwitcher />
           <Button variant="ghost" size="icon" aria-label="Menu">
             <svg
               xmlns="http://www.w3.org/2000/svg"

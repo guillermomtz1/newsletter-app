@@ -7,7 +7,7 @@ import { Suspense } from "react";
 import { NavLinks } from "@/components/tutorial/nav-links";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 
-const Dashboard = () => {
+const Preferences = () => {
   return (
     <>
       <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
@@ -36,9 +36,9 @@ const Dashboard = () => {
           </div>
         </div>
       </nav>
-      <div>Dashboard</div>
+      <div>Preferences</div>
     </>
   );
 };
 
-export default Dashboard;
+export default Preferences;
