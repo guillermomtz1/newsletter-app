@@ -1,4 +1,5 @@
 import { AuthButton } from "@/components/auth-button";
+import { Navbar } from "@/components/navbar";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,21 +10,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen flex flex-col">
       {/* Navigation */}
-      <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16 sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
-        <div className="w-full max-w-7xl flex justify-between items-center p-3 px-5 text-sm">
-          <div className="flex gap-5 items-center font-semibold">
-            <Link href="/" className="text-lg">
-              Newsletter App
-            </Link>
-          </div>
-          <div className="flex items-center gap-4">
-            <Suspense>
-              <AuthButton />
-            </Suspense>
-            <ThemeSwitcher />
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Hero Section */}
       <section className="flex-1 w-full flex flex-col items-center justify-center py-20 px-5">
