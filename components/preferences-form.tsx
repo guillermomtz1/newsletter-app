@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 export function PreferencesForm() {
   const [tickerSymbols, setTickerSymbols] = useState<string[]>([
@@ -14,18 +16,86 @@ export function PreferencesForm() {
     "NVDA",
   ]);
   const [inputValue, setInputValue] = useState("");
+  const [user, setUser] = useState<User | null>(null);
 
-  const handleAddTicker = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+  }, []);
+
+  const handleAddTicker = async (e: React.FormEvent) => {
+    e.preventDefault(); // Prevents refreshing the page
     const ticker = inputValue.trim().toUpperCase();
-    if (ticker && !tickerSymbols.includes(ticker)) {
-      setTickerSymbols([...tickerSymbols, ticker]);
-      setInputValue("");
+
+    if (!ticker) {
+      return;
+    }
+
+    if (tickerSymbols.includes(ticker)) {
+      alert("Ticker symbol already added");
+      return;
+    }
+
+    // Add to local state first
+    const updatedTickers = [...tickerSymbols, ticker];
+    setTickerSymbols(updatedTickers);
+    setInputValue("");
+
+    // Save to API
+    try {
+      const response = await fetch("/api/user-preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticker_symbols: updatedTickers,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Failed to save ticker:", error);
+        // Revert local state on error
+        setTickerSymbols(tickerSymbols);
+        alert("Failed to save ticker symbol. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error saving ticker:", error);
+      // Revert local state on error
+      setTickerSymbols(tickerSymbols);
+      alert("Failed to save ticker symbol. Please try again.");
     }
   };
 
-  const handleRemoveTicker = (ticker: string) => {
-    setTickerSymbols(tickerSymbols.filter((t) => t !== ticker));
+  const handleRemoveTicker = async (ticker: string) => {
+    // Remove from local state first
+    const updatedTickers = tickerSymbols.filter((t) => t !== ticker);
+    setTickerSymbols(updatedTickers);
+
+    // Save to API
+    try {
+      const response = await fetch("/api/user-preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticker_symbols: updatedTickers,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Failed to remove ticker:", error);
+        // Revert local state on error
+        setTickerSymbols(tickerSymbols);
+        alert("Failed to remove ticker symbol. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error removing ticker:", error);
+      // Revert local state on error
+      setTickerSymbols(tickerSymbols);
+      alert("Failed to remove ticker symbol. Please try again.");
+    }
   };
 
   return (
@@ -41,6 +111,7 @@ export function PreferencesForm() {
           </p>
         </div>
 
+        {/* Add Button*/}
         <div className="mt-8">
           <h2 className="text-2xl font-semibold mb-4">Add Ticker Symbols</h2>
           <form onSubmit={handleAddTicker} className="flex gap-2 mb-6">
@@ -51,7 +122,17 @@ export function PreferencesForm() {
               onChange={(e) => setInputValue(e.target.value)}
               className="flex-1"
             />
-            <Button type="submit">Add</Button>
+            <Button
+              type="submit"
+              disabled={inputValue.length === 0}
+              className={` ${
+                inputValue.length === 0
+                  ? "cursor-not-allowed"
+                  : "hover:bg-primary/90"
+              }`}
+            >
+              Add
+            </Button>
           </form>
 
           <div className="flex flex-wrap gap-2">
