@@ -1,3 +1,4 @@
+import { inngest } from "@/inngest/client";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -46,19 +47,18 @@ export async function GET() {
 
 // POST - Create or update user preferences
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await request.json();
-    const { ticker_symbols } = body;
+    const { frequency, ticker_symbols } = body;
 
     if (!Array.isArray(ticker_symbols)) {
       return NextResponse.json(
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     const userId = user.id;
     const userEmail = user.email || "";
 
-    const { data, error: upsertError } = await supabase
+    const { error: upsertError } = await supabase
       .from("user_preferences")
       .upsert(
         {
@@ -85,9 +85,7 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
-      )
-      .select()
-      .single();
+      );
 
     if (upsertError) {
       console.error("Error upserting user preferences:", upsertError);
@@ -97,9 +95,59 @@ export async function POST(request: Request) {
       );
     }
 
+    // Schedule the first newsletter based on frequency
+    const now = new Date();
+
+    // Schedule for tomorrow at 9 AM
+    const scheduleTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    scheduleTime.setHours(9, 0, 0, 0);
+
+    // Trigger Inngest function to schedule newsletter
+    try {
+      console.log("📤 Attempting to send Inngest event: newsletter-schedule");
+      console.log("📦 Event data:", { userId, tickerSymbols: validTickers });
+
+      const eventResult = await inngest.send({
+        name: "newsletter-schedule",
+        data: {
+          userId: userId,
+          email: userEmail,
+          tickerSymbols: validTickers,
+          frequency: frequency,
+          scheduledFor: scheduleTime.toISOString(),
+          isTest: true,
+        },
+      });
+
+      console.log("✅ Inngest event sent successfully!");
+      console.log("🆔 Event IDs:", eventResult.ids);
+      console.log("📋 Full response:", JSON.stringify(eventResult, null, 2));
+    } catch (inngestError: unknown) {
+      // Log but don't fail the request if Inngest fails
+      console.error("❌ Failed to send Inngest event:", inngestError);
+      console.error(
+        "💬 Error message:",
+        inngestError instanceof Error
+          ? inngestError.message
+          : String(inngestError)
+      );
+      console.error("📋 Error details:", JSON.stringify(inngestError, null, 2));
+
+      // Common issue: Dev server not running
+      const errorMessage =
+        inngestError instanceof Error
+          ? inngestError.message
+          : String(inngestError);
+      if (errorMessage.includes("401") || errorMessage.includes("Event key")) {
+        console.warn(
+          "⚠️  Make sure Inngest dev server is running: npx inngest-cli dev"
+        );
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      tickerSymbols: data.ticker_symbols,
+      tickerSymbols: validTickers,
     });
   } catch (error) {
     console.error("Unexpected error:", error);
@@ -125,7 +173,7 @@ export async function PUT(request: Request) {
 
     const userId = user.id;
     const userEmail = user.email || "";
-    const { tickerSymbols } = await request.json();
+    const { frequency, tickerSymbols } = await request.json();
 
     if (!Array.isArray(tickerSymbols)) {
       return NextResponse.json(
@@ -140,21 +188,17 @@ export async function PUT(request: Request) {
       .filter((t: string) => /^[A-Z]{1,5}$/.test(t));
 
     // Upsert: insert or update
-    const { data, error } = await supabase
-      .from("user_preferences")
-      .upsert(
-        {
-          user_id: userId,
-          email: userEmail,
-          ticker_symbols: validTickers,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "user_id",
-        }
-      )
-      .select()
-      .single();
+    const { error } = await supabase.from("user_preferences").upsert(
+      {
+        user_id: userId,
+        email: userEmail,
+        ticker_symbols: validTickers,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id",
+      }
+    );
 
     if (error) {
       console.error("Error updating ticker symbols:", error);
@@ -163,10 +207,59 @@ export async function PUT(request: Request) {
         { status: 500 }
       );
     }
+    // Schedule the first newsletter based on frequency
+    const now = new Date();
+
+    // Schedule for tomorrow at 9 AM
+    const scheduleTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    scheduleTime.setHours(9, 0, 0, 0);
+
+    // Trigger Inngest function to schedule newsletter
+    try {
+      console.log("📤 Attempting to send Inngest event: newsletter-schedule");
+      console.log("📦 Event data:", { userId, tickerSymbols: validTickers });
+
+      const eventResult = await inngest.send({
+        name: "newsletter-schedule",
+        data: {
+          userId: userId,
+          email: userEmail,
+          tickerSymbols: validTickers,
+          frequency: frequency,
+          scheduledFor: scheduleTime.toISOString(),
+          isTest: true,
+        },
+      });
+
+      console.log("✅ Inngest event sent successfully!");
+      console.log("🆔 Event IDs:", eventResult.ids);
+      console.log("📋 Full response:", JSON.stringify(eventResult, null, 2));
+    } catch (inngestError: unknown) {
+      // Log but don't fail the request if Inngest fails
+      console.error("❌ Failed to send Inngest event:", inngestError);
+      console.error(
+        "💬 Error message:",
+        inngestError instanceof Error
+          ? inngestError.message
+          : String(inngestError)
+      );
+      console.error("📋 Error details:", JSON.stringify(inngestError, null, 2));
+
+      // Common issue: Dev server not running
+      const errorMessage =
+        inngestError instanceof Error
+          ? inngestError.message
+          : String(inngestError);
+      if (errorMessage.includes("401") || errorMessage.includes("Event key")) {
+        console.warn(
+          "⚠️  Make sure Inngest dev server is running: npx inngest-cli dev"
+        );
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      tickerSymbols: data.ticker_symbols,
+      tickerSymbols: validTickers,
     });
   } catch (error) {
     console.error("Unexpected error:", error);
