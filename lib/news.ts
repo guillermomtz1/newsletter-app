@@ -15,14 +15,27 @@ export async function fetchArticles(
 
   const promises = symbols.map(async (symbol) => {
     try {
-      const response = await fetch(
-        `https://newsapi.org/v2/everything?q=${encodeURIComponent(
-          symbol
-        )}&from=${since}&sortBy=publishedAt&apiKey=${process.env.NEWS_API_KEY}`
-      );
+      // Format date as YYYY-MM-DD for NewsAPI
+      const dateStr = since.split("T")[0];
+
+      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+        symbol
+      )}&from=${dateStr}&sortBy=publishedAt`;
+
+      const response = await fetch(url, {
+        headers: {
+          "X-API-Key": process.env.NEWS_API_KEY || "",
+        },
+      });
 
       if (!response.ok) {
-        console.error("Failed to fetch for this ticker symbol", symbol);
+        const errorData = await response.json().catch(() => ({}));
+        console.error(
+          `Failed to fetch for ticker symbol "${symbol}":`,
+          response.status,
+          response.statusText,
+          errorData
+        );
         return [];
       }
 

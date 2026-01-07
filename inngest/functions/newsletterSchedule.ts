@@ -23,7 +23,10 @@ export const newsletterSchedule = inngest.createFunction(
 
       const allArticles = await step.run("fetch-news", async () => {
         console.log("📰 Fetching articles for symbols:", symbols);
-        return fetchArticles(symbols);
+        const articles = await fetchArticles(symbols);
+        console.log(`✅ Fetched ${articles.length} articles total`);
+        console.log("📄 Articles:", JSON.stringify(articles, null, 2));
+        return articles;
       });
 
       // Generate the AI summary
@@ -40,7 +43,7 @@ export const newsletterSchedule = inngest.createFunction(
               - Provides context and insights
 
               Format the response as a proper newsletter with a title and orginized content.
-              Make it email-friendly with clear sections for each ticker symbol and engagin subject lines.
+              Clearly separate summaries from each stock and make it email-friendly with clear sections for each ticker symbol and engagin subject lines.
               Focus on news that might move the stock price.`,
             },
             {
@@ -62,8 +65,14 @@ export const newsletterSchedule = inngest.createFunction(
             },
           ],
         },
-        model: step.ai.models.openai({ model: "gpt-4o" }),
+        model: step.ai.models.openai({ model: "gpt-5-nano" }),
       });
+
+      console.log("📝 AI Summary Result:");
+      console.log("=".repeat(80));
+      console.log(summary);
+      console.log("=".repeat(80));
+
       return {};
     } catch (error) {
       console.error("❌ Function error:", error);
