@@ -1,5 +1,7 @@
+import { marked } from "marked";
 import { inngest } from "../client";
 import { fetchArticles } from "@/lib/news";
+import { sendEmail } from "@/lib/email";
 
 type Article = {
   title: string;
@@ -37,14 +39,16 @@ export const newsletterSchedule = inngest.createFunction(
             {
               role: "system",
               content: `You are an expert newsletter editor creating a personalized newsletter. Write a concise, engaging summary that:
-              - highlights the most important stories
+              - Highlights the most important stories
               - Uses friendly, conversational tone
               - Keeps reader informed and engaged
               - Provides context and insights
 
               Format the response as a proper newsletter with a title and orginized content.
               Clearly separate summaries from each stock and make it email-friendly with clear sections for each ticker symbol and engagin subject lines.
-              Focus on news that might move the stock price.`,
+              Focus on news that might move the stock price.
+              
+              Use articles in English or Spanish only`,
             },
             {
               role: "user",
@@ -68,10 +72,26 @@ export const newsletterSchedule = inngest.createFunction(
         model: step.ai.models.openai({ model: "gpt-5-nano" }),
       });
 
-      console.log("📝 AI Summary Result:");
-      console.log("=".repeat(80));
-      console.log(summary);
-      console.log("=".repeat(80));
+      const newsletterContent = summary.choices[0].message.content;
+
+      if (!newsletterContent) {
+        throw new Error("Failed to generate newsletter content");
+      }
+      const htmlResult = await marked(newsletterContent);
+
+      //  EmailJS
+      await step.run("send-email", async () => {
+        await sendEmail(
+          event.data.email,
+          symbols, // Pass as array, not joined string
+          allArticles.length,
+          new Date().toLocaleDateString(),
+          htmlResult,
+          newsletterContent.substring(0, 200) ||
+            "Your personalized stock news newsletter", // Description
+          allArticles // Pass articles array for template
+        );
+      });
 
       return {};
     } catch (error) {

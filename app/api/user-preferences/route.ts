@@ -230,10 +230,6 @@ export async function PUT(request: Request) {
           isTest: true,
         },
       });
-
-      console.log("✅ Inngest event sent successfully!");
-      console.log("🆔 Event IDs:", eventResult.ids);
-      console.log("📋 Full response:", JSON.stringify(eventResult, null, 2));
     } catch (inngestError: unknown) {
       // Log but don't fail the request if Inngest fails
       console.error("❌ Failed to send Inngest event:", inngestError);
