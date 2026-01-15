@@ -2,6 +2,10 @@
 
 A personalized stock market newsletter application that delivers AI-generated summaries of news articles for your favorite ticker symbols directly to your inbox.
 
+
+<img width="734" height="1093" alt="Screenshot 2026-01-14 at 6 37 57 PM" src="https://github.com/user-attachments/assets/1480cc5d-c612-4ef7-947e-b3de105bda29" />
+
+
 ## Overview
 
 This application allows users to:
